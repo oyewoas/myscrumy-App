@@ -1,6 +1,6 @@
 from ayooluwaoyewoscrumy.models import GoalStatus, ScrumyGoals, ScrumyHistory
 from django.contrib.auth.models import User, Group, Permission
-from .models import SignUpForm, CreateGoalForm, AddGoalForm, WeekOnlyAddGoalForm, QAChangegoal, DevMoveGoalForm, AdminChangeGoalForm, QAChangeGoalForm
+from .models import SignUpForm, CreateGoalForm, AddGoalForm, WeekOnlyAddGoalForm,OwnerChangeGoalForm, QAVerifyChangegoal, DevMoveGoalForm, AdminPersonalChangeGoalForm,AdminOthersChangeGoalForm, QADoneChangeGoalForm, QAPersonalChangeGoalForm
 from django.contrib.contenttypes.models import ContentType
 from django.template import loader
 from django.conf import settings
@@ -23,6 +23,12 @@ admingroup = Group.objects.get(name='Admin')
 qualityassurancegroup = Group.objects.get(name='Quality Assurance')
 ownergroup = Group.objects.get(name='Owner')
 verifygoal = GoalStatus.objects.get(status_name="Verify Goal")
+dailygoal = GoalStatus.objects.get(status_name="Daily Goal")
+donegoal = GoalStatus.objects.get(status_name="Done Goal")
+weeklygoal = GoalStatus.objects.get(status_name="Weekly Goal")
+
+
+
 
 
 # permission_can_create_a_new_weekly_goal_for_himself_alone = Permission.objects.create(codename='can_create_weekly_goal_for_himself_alone',
@@ -120,103 +126,16 @@ def move_goals(request, goal_id):
         notexist = 'A record with that goal id does not exist'
         context = {'not_exist': notexist}
         return render(request, 'ayooluwaoyewoscrumy/exception.html', context)
-    if usr_grp == Group.objects.get(name='Developer') and current_user == goal.user:
-        form = DevMoveGoalForm()
 
-        if request.method == 'GET':
-            return render(request, 'ayooluwaoyewoscrumy/movegoal.html', {'form': form, 'goal': goal, 'currentuser': current_user, 'group': usr_grp})
-
-        if request.method == 'POST':
-            form = DevMoveGoalForm(request.POST)
-            if form.is_valid():
-                selected_status = form.save(commit=False)
-                selected = form.cleaned_data['goal_status']
-                get_status = selected_status.status_name
-                choice = GoalStatus.objects.get(id=int(selected))
-                goal.goal_status = choice
-                goal.save()
-                return HttpResponseRedirect(reverse('ayooluwaoyewoscrumy:homepage'))
-
-        else:
+    if usr_grp == Group.objects.get(name='Developer'): 
+        if current_user == goal.user:
             form = DevMoveGoalForm()
-            return render(request, 'ayooluwaoyewoscrumy/movegoal.html',
-                          {'form': form, 'goal': goal, 'current_user': current_user,  'group': usr_grp})
 
-    if usr_grp == Group.objects.get(name='Developer') and current_user != goal.user:
-        form = DevMoveGoalForm()
-
-        if request.method == 'GET':
-            notexist = 'Cannot move other users goals'
-            context = {'not_exist': notexist}
-            return render(request, 'ayooluwaoyewoscrumy/exception.html', context)
-
-    if usr_grp == Group.objects.get(name='Admin'):
-        form = AdminChangeGoalForm()
-
-        if request.method == 'GET':
-            return render(request, 'ayooluwaoyewoscrumy/movegoal.html', {'form': form, 'goal': goal, 'currentuser': current_user, 'group': usr_grp})
-        if request.method == 'POST':
-                form = AdminChangeGoalForm(request.POST)
-                if form.is_valid():
-                    selected_status = form.save(commit=False)
-                    get_status = selected_status.goal_status
-                    goal.goal_status = get_status
-                    goal.save()
-                    return HttpResponseRedirect(reverse('ayooluwaoyewoscrumy:homepage'))
-        else:
-            form = AdminChangeGoalForm()
-            return render(request, 'ayooluwaoyewoscrumy/movegoal.html',
-                          {'form': form, 'goal': goal, 'current_user': current_user,  'group': usr_grp})
-    
-    if usr_grp == Group.objects.get(name='Owner') and current_user == goal.user:
-        form = AdminChangeGoalForm()
-
-        if request.method == 'GET':
-            return render(request, 'ayooluwaoyewoscrumy/movegoal.html', {'form': form, 'goal': goal, 'currentuser': current_user, 'group': usr_grp})
-        if request.method == 'POST':
-                form = AdminChangeGoalForm(request.POST)
-                if form.is_valid():
-                    selected_status = form.save(commit=False)
-                    get_status = selected_status.goal_status
-                    goal.goal_status = get_status
-                    goal.save()
-                    return HttpResponseRedirect(reverse('ayooluwaoyewoscrumy:homepage'))
-        else:
-            form = AdminChangeGoalForm()
-            return render(request, 'ayooluwaoyewoscrumy/movegoal.html',
-                          {'form': form, 'goal': goal, 'current_user': current_user,  'group': usr_grp})
-    else:
-        notexist = 'You cannot move other users goals'
-        context = {'not_exist': notexist}
-        return render(request, 'ayooluwaoyewoscrumy/exception.html', context)
-    
-    
-    if usr_grp == Group.objects.get(name='Quality Assurance') and current_user == goal.user:
-        form = QAChangegoal()
-
-        if request.method == 'GET':
-            return render(request, 'ayooluwaoyewoscrumy/movegoal.html', {'form': form, 'goal': goal, 'currentuser': current_user, 'group': usr_grp})
-        if request.method == 'POST':
-            form = QAChangegoal(request.POST)
-            if form.is_valid():
-                selected_status = form.save(commit=False)
-                selected = form.cleaned_data['goal_status']
-                get_status = selected_status.status_name
-                choice = GoalStatus.objects.get(id=int(selected))
-                goal.goal_status = choice
-                goal.save()
-                return HttpResponseRedirect(reverse('ayooluwaoyewoscrumy:homepage'))
-        else:
-            form = QAChangegoal()
-            return render(request, 'ayooluwaoyewoscrumy/movegoal.html',
-                              {'form': form, 'goal': goal, 'currentuser': current_user, 'group': usr_grp})
-
-    if usr_grp == Group.objects.get(name='Quality Assurance') and current_user != goal.user and goal.goal_status == verifygoal:
-        form = QAChangeGoalForm()
-        if request.method == 'GET':
+            if request.method == 'GET':
                 return render(request, 'ayooluwaoyewoscrumy/movegoal.html', {'form': form, 'goal': goal, 'currentuser': current_user, 'group': usr_grp})
-        if request.method == 'POST':
-                form = QAChangeGoalForm(request.POST)
+
+            if request.method == 'POST':
+                form = DevMoveGoalForm(request.POST)
                 if form.is_valid():
                     selected_status = form.save(commit=False)
                     selected = form.cleaned_data['goal_status']
@@ -226,14 +145,126 @@ def move_goals(request, goal_id):
                     goal.save()
                     return HttpResponseRedirect(reverse('ayooluwaoyewoscrumy:homepage'))
 
+            else:
+                form = DevMoveGoalForm()
+                return render(request, 'ayooluwaoyewoscrumy/movegoal.html',
+                          {'form': form, 'goal': goal, 'current_user': current_user,  'group': usr_grp})
+
+        if current_user != goal.user:
+            notexist = 'A Developer Cannot move other users goals'
+            context = {'not_exist': notexist}
+            return render(request, 'ayooluwaoyewoscrumy/exception.html', context)
+
+    if usr_grp == Group.objects.get(name='Admin'):
+        if current_user == goal.user:
+            form = AdminPersonalChangeGoalForm()
+
+            if request.method == 'GET':
+                return render(request, 'ayooluwaoyewoscrumy/movegoal.html', {'form': form, 'goal': goal, 'currentuser': current_user, 'group': usr_grp})
+            if request.method == 'POST':
+                form = AdminPersonalChangeGoalForm(request.POST)
+                if form.is_valid():
+                    selected_status = form.save(commit=False)
+                    selected = form.cleaned_data['goal_status']
+                    get_status = selected_status.status_name
+                    choice = GoalStatus.objects.get(id=int(selected))
+                    goal.goal_status = choice
+                    goal.save()
+                    return HttpResponseRedirect(reverse('ayooluwaoyewoscrumy:homepage'))
+            else:
+                form = AdminPersonalChangeGoalForm()
+                return render(request, 'ayooluwaoyewoscrumy/movegoal.html',
+                          {'form': form, 'goal': goal, 'current_user': current_user,  'group': usr_grp})
+     
+        if current_user != goal.user and goal.goal_status == dailygoal or goal.goal_status == verifygoal:
+            form = AdminOthersChangeGoalForm()
+
+            if request.method == 'GET':
+                return render(request, 'ayooluwaoyewoscrumy/movegoal.html', {'form': form, 'goal': goal, 'currentuser': current_user, 'group': usr_grp})
+            if request.method == 'POST':
+                form = AdminOthersChangeGoalForm(request.POST)
+                if form.is_valid():
+                    selected_status = form.save(commit=False)
+                    selected = form.cleaned_data['goal_status']
+                    get_status = selected_status.status_name
+                    choice = GoalStatus.objects.get(id=int(selected))
+                    goal.goal_status = choice
+                    goal.save()
+                    return HttpResponseRedirect(reverse('ayooluwaoyewoscrumy:homepage'))
+            else:
+                form = AdminOthersChangeGoalForm()
+                return render(request, 'ayooluwaoyewoscrumy/movegoal.html',
+                          {'form': form, 'goal': goal, 'current_user': current_user,  'group': usr_grp})
+    
+        if current_user != goal.user and goal.goal_status != dailygoal or goal.goal_status != verifygoal:
+            notexist = 'Admin Can Only Move other users goals back and forth from Daily Column to Verify Column'
+            context = {'not_exist': notexist}
+            return render(request, 'ayooluwaoyewoscrumy/exception.html', context)
+
+    if usr_grp == Group.objects.get(name='Owner'):
+        form = OwnerChangeGoalForm()
+
+        if request.method == 'GET':
+            return render(request, 'ayooluwaoyewoscrumy/movegoal.html', {'form': form, 'goal': goal, 'currentuser': current_user, 'group': usr_grp})
+        if request.method == 'POST':
+                form = OwnerChangeGoalForm(request.POST)
+                if form.is_valid():
+                    selected_status = form.save(commit=False)
+                    get_status = selected_status.goal_status
+                    goal.goal_status = get_status
+                    goal.save()
+                    return HttpResponseRedirect(reverse('ayooluwaoyewoscrumy:homepage'))
         else:
-                form = QAChangeGoalForm()
+            form = OwnerChangeGoalForm()
+            return render(request, 'ayooluwaoyewoscrumy/movegoal.html',
+                          {'form': form, 'goal': goal, 'current_user': current_user,  'group': usr_grp})
+    
+    
+    if usr_grp == Group.objects.get(name='Quality Assurance'):
+        if goal.goal_status == verifygoal:
+            form = QAVerifyChangegoal()
+
+            if request.method == 'GET':
+                return render(request, 'ayooluwaoyewoscrumy/movegoal.html', {'form': form, 'goal': goal, 'currentuser': current_user, 'group': usr_grp})
+            if request.method == 'POST':
+                form = QAVerifyChangegoal(request.POST)
+                if form.is_valid():
+                    selected_status = form.save(commit=False)
+                    selected = form.cleaned_data['goal_status']
+                    get_status = selected_status.status_name
+                    choice = GoalStatus.objects.get(id=int(selected))
+                    goal.goal_status = choice
+                    goal.save()
+                    return HttpResponseRedirect(reverse('ayooluwaoyewoscrumy:homepage'))
+            else:
+                form = QAVerifyChangegoal()
                 return render(request, 'ayooluwaoyewoscrumy/movegoal.html',
                               {'form': form, 'goal': goal, 'currentuser': current_user, 'group': usr_grp})
-    else: 
-        notexist = 'You can only move goal from verify goals to done goals'
-        context = {'not_exist': notexist}
-        return render(request, 'ayooluwaoyewoscrumy/exception.html', context)
+
+        if goal.goal_status == donegoal:
+            form = QADoneChangeGoalForm()
+            if request.method == 'GET':
+                return render(request, 'ayooluwaoyewoscrumy/movegoal.html', {'form': form, 'goal': goal, 'currentuser': current_user, 'group': usr_grp})
+            if request.method == 'POST':
+                form = QADoneChangeGoalForm(request.POST)
+                if form.is_valid():
+                    selected_status = form.save(commit=False)
+                    selected = form.cleaned_data['goal_status']
+                    get_status = selected_status.status_name
+                    choice = GoalStatus.objects.get(id=int(selected))
+                    goal.goal_status = choice
+                    goal.save()
+                    return HttpResponseRedirect(reverse('ayooluwaoyewoscrumy:homepage'))
+
+            else:
+                form = QADoneChangeGoalForm()
+                return render(request, 'ayooluwaoyewoscrumy/movegoal.html',
+                              {'form': form, 'goal': goal, 'currentuser': current_user, 'group': usr_grp})
+        if goal.goal_status != verifygoal or goal.goal_status != donegoal and current_user != goal.user:
+            notexist = 'Quality assurance Can Only Move other users goals from Verify Column to Done Column, and from Done Column to other columns'
+            context = {'not_exist': notexist}
+            return render(request, 'ayooluwaoyewoscrumy/exception.html', context)
+
 
 
 def add_goal(request):

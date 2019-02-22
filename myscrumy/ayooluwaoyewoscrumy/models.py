@@ -75,19 +75,36 @@ class DevMoveGoalForm(forms.ModelForm):
         fields = ['goal_status']
 
 
-class AdminChangeGoalForm(forms.ModelForm):
+class AdminPersonalChangeGoalForm(forms.ModelForm):
+    queryset = GoalStatus.objects.all()
+    goal_status = forms.ChoiceField(choices=[(choice.pk, choice) for choice in queryset[:3]])
+    class Meta:
+        model = GoalStatus
+        fields = ['goal_status']
+class OwnerChangeGoalForm(ModelForm):
     class Meta:
         model = ScrumyGoals
         fields = ['goal_status']
+class AdminOthersChangeGoalForm(forms.ModelForm):
+    queryset = GoalStatus.objects.all()
+    goal_status = forms.ChoiceField(choices=[(choice.pk, choice) for choice in queryset[1:3]])
+    class Meta:
+        model = GoalStatus
+        fields = ['goal_status']
 
-class QAChangegoal(forms.ModelForm):
+class QADoneChangeGoalForm(forms.ModelForm):
     queryset = GoalStatus.objects.all()
     goal_status = forms.ChoiceField(choices=[(choice.pk, choice) for choice in queryset[:4]])
     class Meta:
         model = GoalStatus
         fields = ['goal_status']
-
-class QAChangeGoalForm(forms.ModelForm):
+class QAPersonalChangeGoalForm(forms.ModelForm):
+    queryset = GoalStatus.objects.all()
+    goal_status = forms.ChoiceField(choices=[(choice.pk, choice) for choice in queryset[:4]])
+    class Meta:
+        model = GoalStatus
+        fields = ['goal_status']
+class QAVerifyChangegoal(forms.ModelForm):
     queryset = GoalStatus.objects.all()
     goal_status = forms.ChoiceField(choices=[(choice.pk, choice) for choice in queryset.order_by('-id')[:2][::-1]])
 
