@@ -1,5 +1,6 @@
 from ayooluwaoyewoscrumy.models import GoalStatus, ScrumyGoals, ScrumyHistory
 from django.contrib.auth.models import User, Group, Permission
+from .models import ScrumyGoals, GoalStatus
 from .models import SignUpForm, CreateGoalForm, AddGoalForm, WeekOnlyAddGoalForm,OwnerChangeGoalForm, QAVerifyChangegoal, DevMoveGoalForm, AdminPersonalChangeGoalForm,AdminOthersChangeGoalForm, QADoneChangeGoalForm, QAPersonalChangeGoalForm
 from django.contrib.contenttypes.models import ContentType
 from django.template import loader
@@ -11,9 +12,23 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
 from django.http import HttpResponse, HttpResponseRedirect
+from rest_framework import viewsets
+from .serializers import UserSerializer, ScrumGoalSerializer, ScrumUserSerializer
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.authentication import SessionAuthentication, BasicAuthentication
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
+from rest_framework.status import (
+    HTTP_400_BAD_REQUEST,
+    HTTP_404_NOT_FOUND,
+    HTTP_200_OK
+)
+
+
 
 # Create your views here.
-from .models import ScrumyGoals, GoalStatus
 
 content_type_scrumygoals = ContentType.objects.get_for_model(ScrumyGoals)
 content_type_goalstatus = ContentType.objects.get_for_model(GoalStatus)
@@ -59,6 +74,77 @@ weeklygoal = GoalStatus.objects.get(status_name="Weekly Goal")
 # permission_can_move_his_goals_anywhere = Permission.objects.create(codename = 'can_move_his_goals_anywhere',
 # name='Can move his goals anywhere', content_type=content_type_goalstatus)
 # ownergroup.permissions.add(permission_can_move_his_goals_anywhere)
+
+#Using serializers and views in django rest framework    
+class ScrumUserViewSet(viewsets.ModelViewSet):
+
+    queryset = User.objects.all()
+    serializer_class = ScrumUserSerializer
+
+    def create(self, request):
+        serializer = self.serializer_class(data=request.data)
+
+        if serializer.is_valid():
+            User.objects.create_user(**serializer.validated_data)
+
+            return Response(
+            serializer.validated_data, status=status.HTTP_201_CREATED
+            )
+
+        return Response({
+            'status': 'Bad request',
+            'message': 'Account could not be created with received data.'
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+class ScrumGoalViewSet(viewsets.ModelViewSet):
+
+    queryset = GoalStatus.objects.all()
+    serializer_class = ScrumGoalSerializer
+
+class UserViewSet(viewsets.ModelViewSet):
+
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    
+def login(request):
+    username = request.data.get("username")
+    password = request.data.get("password")
+    if username is None or password is None:
+        return Response({'error': 'Please provide both username and password'},
+                        status=HTTP_400_BAD_REQUEST)
+    user = authenticate(username=username, password=password)
+    if not user:
+        return Response({'error': 'Invalid Credentials'},
+                        status=HTTP_404_NOT_FOUND)
+    token, _ = Token.objects.get_or_create(user=user)
+    return Response({'token': token.key},
+                    status=HTTP_200_OK)
+
+    # def get(self, request, format=None):
+    #     data = json.loads(request.body)
+
+    #     email = data.get('email', None)
+    #     password = data.get('password')
+
+    #     account = authenticate(email=email, password=password)
+
+    #     if account is not None:
+    #         if account.is_active:
+    #             login(request, account)
+
+    #             serialized = UserSerializer(account)
+
+    #             return Response(serialized.data)
+    #         else:
+    #             return Response({
+    #                 'status': 'Unauthorized',
+    #                 'message': 'This account has been disabled.'
+    #         }, status=status.HTTP_401_UNAUTHORIZED)
+    #     else:
+    #         return Response({
+    #            'status': 'Unauthorized',
+    #            'message': 'Username/password combination invalid.'
+    #     }, status=status.HTTP_401_UNAUTHORIZED)
 
 def index(request):
     form = SignUpForm()

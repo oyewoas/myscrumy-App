@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.forms import ModelForm
 from django import forms
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 
 # Create your models here.
@@ -10,7 +12,7 @@ class GoalStatus(models.Model):
     def __str__(self):
         return self.status_name
 
-    
+
 class ScrumyGoals(models.Model):
     goal_name = models.CharField(max_length=200)
     goal_id = models.AutoField(primary_key=True)
@@ -32,15 +34,12 @@ class ScrumyHistory(models.Model):
     goal = models.ForeignKey(ScrumyGoals, on_delete=models.CASCADE)
     def __str__(self):
         return self.moved_by
-    def __str__(self):
-        return self.created_by
-    def __str__(self):
-        return self.moved_from
-    def __str__(self):
-        return self.moved_to
 
-
-
+# Add more fields to user table
+fullname = models.CharField(max_length=500, name='fullname', blank=True)
+fullname.contribute_to_class(User, 'fullname')
+usertype = models.CharField(max_length=30, blank=True)
+usertype.contribute_to_class(User, 'usertype')
 
 class SignUpForm(ModelForm):
     class Meta:
