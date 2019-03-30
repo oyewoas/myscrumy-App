@@ -40,7 +40,22 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'corsheaders',
+    # 'rest_framework.authtoken'
 ]
+
+
+# REST_FRAMEWORK = {
+# 'DEFAULT_AUTHENTICATION_CLASSES': (
+# 'rest_framework.authentication.TokenAuthentication',
+# 'rest_framework.authentication.SessionAuthentication',
+# ),
+
+# 'DEFAULT_PERMISSION_CLASSES': (
+# 'rest_framework.permissions.IsAuthenticated',
+# )
+# }
+
+
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
@@ -53,21 +68,6 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-REST_FRAMEWORK = {
-    'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
-    ),
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_jwt.authentication.JSONWebTokenAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
-        'rest_framework.authentication.BasicAuthentication',
-    ),
-}
-
-JWT_AUTH = {
-    'JWT_ALLOW_REFRESH': True,
-    'JWT_EXPIRATION_DELTA': datetime.timedelta(seconds=3600),
-}
 
 ROOT_URLCONF = 'myscrumy.urls'
 
@@ -96,7 +96,7 @@ WSGI_APPLICATION = 'myscrumy.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'myscrumydb',
+        'NAME': 'myscrumydbupdate',
         'USER': 'oyewoas',
         'HOST': '',
         'PORT': 5000,
@@ -123,7 +123,9 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
+# DJANGO_NOTIFICATIONS_CONFIG = {
+#     'USE_JSONFIELD': True
+# }
 # Internationalization
 # https://docs.djangoproject.com/en/2.1/topics/i18n/
 
@@ -138,6 +140,8 @@ USE_L10N = True
 USE_TZ = True
 
 CORS_ORIGIN_ALLOW_ALL = True
+
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.1/howto/static-files/

@@ -1,33 +1,28 @@
 from ayooluwaoyewoscrumy.models import GoalStatus, ScrumyGoals, ScrumyHistory
 from django.contrib.auth.models import User, Group, Permission
-from .models import ScrumyGoals, GoalStatus
+from .models import ScrumyGoals, GoalStatus, ScrumyUser
 from .models import SignUpForm, CreateGoalForm, AddGoalForm, WeekOnlyAddGoalForm,OwnerChangeGoalForm, QAVerifyChangegoal, DevMoveGoalForm, AdminPersonalChangeGoalForm,AdminOthersChangeGoalForm, QADoneChangeGoalForm, QAPersonalChangeGoalForm
 from django.contrib.contenttypes.models import ContentType
 from django.template import loader
 from django.conf import settings
 from django.shortcuts import redirect
+from django.core import serializers
+from .serializers import ScrumGoalSerializer, ScrumUserSerializer, UserSerializer
 from django.contrib.auth.decorators import login_required
-from random import *
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from rest_framework import viewsets
-from .serializers import UserSerializer, ScrumGoalSerializer, ScrumUserSerializer
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.authentication import SessionAuthentication, BasicAuthentication
+from django.contrib.auth import authenticate, login, logout
+from rest_framework.decorators import api_view
+import json
+from rest_framework.authentication import SessionAuthentication, BasicAuthentication, TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.authtoken.models import Token
 from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny
-from rest_framework.status import (
-    HTTP_400_BAD_REQUEST,
-    HTTP_404_NOT_FOUND,
-    HTTP_200_OK
-)
-
-
-
 # Create your views here.
 
 content_type_scrumygoals = ContentType.objects.get_for_model(ScrumyGoals)
@@ -46,105 +41,7 @@ weeklygoal = GoalStatus.objects.get(status_name="Weekly Goal")
 
 
 
-# permission_can_create_a_new_weekly_goal_for_himself_alone = Permission.objects.create(codename='can_create_weekly_goal_for_himself_alone',
-# name='Can Create Weekly Goal For Himself Alone',content_type=content_type_scrumygoals)
-# developergroup.permissions.add(permission_can_create_a_new_weekly_goal_for_himself_alone)
-# qualityassurancegroup.permissions.add(permission_can_create_a_new_weekly_goal_for_himself_alone)
 
-# permission_can_create_a_new_weekly_goal = Permission.objects.create(codename='can_create_new_weekly_goal',
-# name='Can Create Weekly Goal',content_type=content_type_scrumygoals)
-# ownergroup.permissions.add(permission_can_create_a_new_weekly_goal)
-
-# permission_can_move_from_weeklygoal_to_dailygoal_and_verifygoal = Permission.objects.create(codename = 'can_move_from_weeklygoal_to_dailygoal_and_verifygoal',
-# name='Can move from weeklygoal to dailygoal and verifygoal', content_type=content_type_goalstatus)
-# developergroup.permissions.add(permission_can_move_from_weeklygoal_to_dailygoal_and_verifygoal)
-
-# permission_can_move_goals_to_any_other_goalstatus = Permission.objects.create(codename = 'can_move_goals_to_any_other_goalstatus',
-# name='Can move goals to any other goalstatus', content_type=content_type_goalstatus)
-# qualityassurancegroup.permissions.add(permission_can_move_goals_to_any_other_goalstatus)
-
-# permission_can_move_anybodys_goal_from_verifygoal_to_donegoal = Permission.objects.create(codename = 'can_move_anybodys_goal_from_verifygoal_to_donegoal',
-# name='Can move anybodys goal from verifygoal to done goal', content_type=content_type_goalstatus)
-# qualityassurancegroup.permissions.add(permission_can_move_anybodys_goal_from_verifygoal_to_donegoal)
-
-# permission_can_move_anybodys_goal_to_any_of_the_goalstatus = Permission.objects.create(codename = 'can_move_anybodys_goal_to_any_of_the_goalstatus',
-# name='Can move anybodys goal to any of the goal status', content_type=content_type_goalstatus)
-# admingroup.permissions.add(permission_can_move_anybodys_goal_to_any_of_the_goalstatus)
-
-# permission_can_move_his_goals_anywhere = Permission.objects.create(codename = 'can_move_his_goals_anywhere',
-# name='Can move his goals anywhere', content_type=content_type_goalstatus)
-# ownergroup.permissions.add(permission_can_move_his_goals_anywhere)
-
-#Using serializers and views in django rest framework    
-class ScrumUserViewSet(viewsets.ModelViewSet):
-
-    queryset = User.objects.all()
-    serializer_class = ScrumUserSerializer
-
-    def create(self, request):
-        serializer = self.serializer_class(data=request.data)
-
-        if serializer.is_valid():
-            User.objects.create_user(**serializer.validated_data)
-
-            return Response(
-            serializer.validated_data, status=status.HTTP_201_CREATED
-            )
-
-        return Response({
-            'status': 'Bad request',
-            'message': 'Account could not be created with received data.'
-        }, status=status.HTTP_400_BAD_REQUEST)
-
-class ScrumGoalViewSet(viewsets.ModelViewSet):
-
-    queryset = GoalStatus.objects.all()
-    serializer_class = ScrumGoalSerializer
-
-class UserViewSet(viewsets.ModelViewSet):
-
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-    
-def login(request):
-    username = request.data.get("username")
-    password = request.data.get("password")
-    if username is None or password is None:
-        return Response({'error': 'Please provide both username and password'},
-                        status=HTTP_400_BAD_REQUEST)
-    user = authenticate(username=username, password=password)
-    if not user:
-        return Response({'error': 'Invalid Credentials'},
-                        status=HTTP_404_NOT_FOUND)
-    token, _ = Token.objects.get_or_create(user=user)
-    return Response({'token': token.key},
-                    status=HTTP_200_OK)
-
-    # def get(self, request, format=None):
-    #     data = json.loads(request.body)
-
-    #     email = data.get('email', None)
-    #     password = data.get('password')
-
-    #     account = authenticate(email=email, password=password)
-
-    #     if account is not None:
-    #         if account.is_active:
-    #             login(request, account)
-
-    #             serialized = UserSerializer(account)
-
-    #             return Response(serialized.data)
-    #         else:
-    #             return Response({
-    #                 'status': 'Unauthorized',
-    #                 'message': 'This account has been disabled.'
-    #         }, status=status.HTTP_401_UNAUTHORIZED)
-    #     else:
-    #         return Response({
-    #            'status': 'Unauthorized',
-    #            'message': 'Username/password combination invalid.'
-    #     }, status=status.HTTP_401_UNAUTHORIZED)
 
 def index(request):
     form = SignUpForm()
@@ -176,28 +73,6 @@ def specificgoal(request):
     response = ScrumyGoals.objects.filter(goal_name='Learn Django')
     return HttpResponse(response)
 
-
-# def move_goals(request, goal_id):
-#     if not request.user.is_authenticated:
-#         return redirect('%s?next=%s' % (settings.LOGIN_URL, request.path))
-#     form = DevMoveGoalForm()
-#     user = request.user
-#     try:
-#         goal = ScrumyGoals.objects.get(pk=goal_id)
-#     except ObjectDoesNotExist:
-#         notexist = 'A record with that goal id does not exist'
-#         context = {'not_exist': notexist}
-#         return render(request, 'ayooluwaoyewoscrumy/exception.html', context)
-#     if request.method == 'GET':
-#         return render(request, 'ayooluwaoyewoscrumy/movegoal.html', {'form': form, 'goal': goal})
-#     elif request.method == 'POST':
-#         form = DevMoveGoalForm(request.POST, instance=goal)
-#         if form.is_valid():
-#             form.save()
-#             return HttpResponseRedirect(reverse('ayooluwaoyewoscrumy:homepage'))
-#     else:
-#         form = DevMoveGoalForm()
-#         return render(request, 'ayooluwaoyewoscrumy/movegoal.html', {'form': form, 'goal': goal})
 
 
 def move_goals(request, goal_id):
@@ -425,3 +300,80 @@ def homepage(request):
                 return render(request, 'ayooluwaoyewoscrumy/home.html', context)
             
                
+
+
+
+
+#Using serializers and views in django rest framework    
+
+class ScrumUserViewSet(viewsets.ModelViewSet):
+    queryset = ScrumyUser.objects.all()
+    serializer_class = ScrumUserSerializer
+
+    def create(self, request):
+        password = request.data['password']
+        confirmpassword = request.data['confirmpassword']
+        role = request.data['role']
+        fullname = request.data['fullname']
+        username = request.data['username']
+
+        if password == '' and role == '' and fullname == '' and username == '':
+            return JsonResponse({'message': 'Error: All fields are required.'})
+        if password != confirmpassword:
+            return JsonResponse({'message': 'Error: Password Do not match.'})
+        user, created = User.objects.get_or_create(username = request.data['username'])
+        if created:
+            user.set_password(password)
+            group = Group.objects.get(name = request.data['role'])
+            group.user_set.add(user)
+            user.save()
+            scrum_user = ScrumyUser(user=user, nickname=request.data['fullname'])
+            scrum_user.save()
+            return JsonResponse({'message', 'User Created Successfully'})
+        else:
+            return JsonResponse({'message': 'Error: Username Already Exists.'})
+
+def filtered_users():
+    users = ScrumUserSerializer(ScrumyUser.objects.all(), many=True).data
+
+    for user in users:
+        user['scrumygoals_set'] = [x for x in user['scrumygoals_set']
+         if x['visible'] == True]
+    return users
+
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+
+    def create(self, request):
+        username = request.data['username']
+        password = request.data['password']
+
+        login_user = authenticate(request, username=username, password=password)
+        if login_user is not None:
+            return JsonResponse({'exit': 0, 'message': 'Welcome to your Scrum Board', 'role': login_user.groups.all()[0].name, 'data': filtered_users()})
+        else: 
+            return JsonResponse({'exit': 1, 'message': 'Error: Invalid Credentials'})
+
+class ScrumGoalViewSet(viewsets.ModelViewSet):
+    queryset = ScrumyGoals.objects.all()
+    serializer_class = ScrumGoalSerializer
+
+    def create(self, request):
+
+        user = authenticate(request, username=request.data['username'], password=request.data['password'])
+        if user is not None:
+            goal_name = request.data['goal_name']
+            group_name = user.groups.all()[0].name 
+            status_name = GoalStatus(id=2)
+            if group_name == 'Admin':
+                status_name = GoalStatus(id=3)
+                 
+            elif group_name == 'Quality Assurance':
+                status_name = GoalStatus(id=4)
+                
+            goal = ScrumyGoals(user=user.scrumyuser, goal_name = goal_name, goal_status = status_name)
+            goal.save()
+            return JsonResponse({'exit': 0, 'message': 'Goal Added', 'data': filtered_users()})
+        else:
+            return JsonResponse({'exit': 1, 'message': 'Not Logged In! Please Login First!'})

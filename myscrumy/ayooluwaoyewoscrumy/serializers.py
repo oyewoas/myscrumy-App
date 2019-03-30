@@ -1,24 +1,24 @@
 from rest_framework import serializers
-from rest_framework.validators import UniqueValidator
-from .models import GoalStatus, ScrumyGoals, ScrumyHistory
-from django.contrib.auth.models import User, Group, Permission
-
+from .models import User, ScrumyGoals, ScrumyUser
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('id', 'email', 'username', 'password', 'fullname', 'usertype')
-
-class ScrumUserSerializer(serializers.ModelSerializer):
-        class Meta:
-            model = User
-            fields = ('id', 'first_name', 'last_name', 'password', 'email','username', 'fullname', 'usertype')
-        
-
+        fields = ['username']
 
 class ScrumGoalSerializer(serializers.ModelSerializer):
     class Meta:
-        model = GoalStatus
-        fields = ('id', 'status_name')
-        
-        
+        model = ScrumyGoals
+        fields = ('visible', 'goal_id', 'goal_name', 'goal_status')
+
+class ScrumUserSerializer(serializers.ModelSerializer):
+    scrumygoals_set = ScrumGoalSerializer(many=True)
+    class Meta:
+        model = ScrumyUser
+        fields = ('id', 'nickname', 'scrumygoals_set')
+    
+    
+
+
+
+
