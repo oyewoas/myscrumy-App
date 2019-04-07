@@ -7,7 +7,7 @@ from django.template import loader
 from django.conf import settings
 from django.shortcuts import redirect
 from django.core import serializers
-from .serializers import ScrumGoalSerializer, ScrumUserSerializer, UserSerializer
+from .serializers import ScrumGoalSerializer, ScrumUserSerializer
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import render, get_object_or_404, redirect
@@ -19,8 +19,7 @@ from rest_framework import status
 from django.contrib.auth import authenticate, login, logout
 from rest_framework.decorators import api_view
 import json
-from rest_framework.authentication import SessionAuthentication, BasicAuthentication, TokenAuthentication
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.authtoken.models import Token
 from rest_framework.views import APIView
 # Create your views here.
@@ -333,6 +332,8 @@ class ScrumUserViewSet(viewsets.ModelViewSet):
         else:
             return JsonResponse({'message': 'Error: Username Already Exists.'})
 
+
+
 def filtered_users():
     users = ScrumUserSerializer(ScrumyUser.objects.all(), many=True).data
 
@@ -341,39 +342,132 @@ def filtered_users():
          if x['visible'] == True]
     return users
 
-class UserViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
+# class UserViewSet(viewsets.ModelViewSet):
+#     queryset = User.objects.all()
+#     serializer_class = UserSerializer
 
-    def create(self, request):
-        username = request.data['username']
-        password = request.data['password']
+#     def create(self, request):
+#         username = request.data['username']
+#         password = request.data['password']
 
-        login_user = authenticate(request, username=username, password=password)
-        if login_user is not None:
-            return JsonResponse({'exit': 0, 'message': 'Welcome to your Scrum Board', 'role': login_user.groups.all()[0].name, 'data': filtered_users()})
-        else: 
-            return JsonResponse({'exit': 1, 'message': 'Error: Invalid Credentials'})
+#         login_user = authenticate(request, username=username, password=password)
+#         if login_user is not None:
+#             return JsonResponse({'exit': 0, 'message': 'Welcome to your Scrum Board', 'role': login_user.groups.all()[0].name, 'data': filtered_users()})
+#         else: 
+#             return JsonResponse({'exit': 1, 'message': 'Error: Invalid Credentials'})
+
+
 
 class ScrumGoalViewSet(viewsets.ModelViewSet):
     queryset = ScrumyGoals.objects.all()
     serializer_class = ScrumGoalSerializer
-
+    permission_classes = [IsAuthenticatedOrReadOnly]
     def create(self, request):
-
-        user = authenticate(request, username=request.data['username'], password=request.data['password'])
-        if user is not None:
             goal_name = request.data['goal_name']
-            group_name = user.groups.all()[0].name 
-            status_name = GoalStatus(id=2)
+            group_name = request.user.groups.all()[0].name 
+            status_name = GoalStatus(id=1)
             if group_name == 'Admin':
-                status_name = GoalStatus(id=3)
+                status_name = GoalStatus(id=2)
                  
             elif group_name == 'Quality Assurance':
-                status_name = GoalStatus(id=4)
+                status_name = GoalStatus(id=3)
                 
-            goal = ScrumyGoals(user=user.scrumyuser, goal_name = goal_name, goal_status = status_name)
+            goal = ScrumyGoals(user=request.user.scrumyuser, goal_name = goal_name, goal_status = status_name)
             goal.save()
-            return JsonResponse({'exit': 0, 'message': 'Goal Added', 'data': filtered_users()})
+            return JsonResponse({ 'message': 'Goal Added', 'data': filtered_users()})
+        
+    
+    def patch(self, request):
+            goals_id = request.data['goal_id']
+            to_id = request.data['to_id']
+            print(to_id)
+
+            if to_id == 4:
+                if request.user.groups.all()[0].name == 'Developer':
+                    if request.user != ScrumyGoals.objects.get(goal_id=goals_id).user.user:
+                        return JsonResponse({ 'message': 'Permission Denied: Unauthorized Deletion of Goal.', 'data': filtered_users()})
+                
+                del_goal = ScrumyGoals.objects.get(goal_id = goals_id)
+                del_goal.visible = False
+                del_goal.save()
+                return JsonResponse({'message': 'Goal Removed Successfully', 'data': filtered_users()})
+            else:
+                goal_item = ScrumyGoals.objects.get(goal_id=goals_id)
+                print(goal_item)
+                group = request.user.groups.all()[0].name
+                print(group)
+                from_allowed = []
+                to_allowed = []
+
+                if group == 'Developer':
+
+                    if request.user != goal_item.user.user:
+                        return JsonResponse({'message': 'Permission Denied: Unauthorized Deletion of Goal.', 'data': filtered_users()})
+
+                if group == 'Owner':
+                    from_allowed = [1,2,3,4]
+                    to_allowed = [0,1,2,3]
+                
+                elif  group == 'Admin':
+                    from_allowed = [2,3]
+                    to_allowed = [1,2]
+
+
+                elif  group == 'Developer':
+                    from_allowed = [1,2]
+                    to_allowed = [0,1]
+                
+                if (goal_item.goal_status_id in from_allowed) and (to_id in to_allowed):
+                    # choice = GoalStatus.objects.get(id=to_id)
+                    if to_id >= 0:
+                        goal_item.goal_status_id = to_id  + 1
+                    
+                    
+
+
+
+                elif group == 'Quality Assurance' and goal_item.goal_status_id == 3 and to_id == 0:
+                    goal_item.goal_status_id = to_id + 1
+
+                else: 
+                    return JsonResponse({ 'message': 'Permission Denied: Unauthorized Movement of Goal.', 'data': filtered_users()})   
+
+                goal_item.save()  
+                return JsonResponse({ 'message': 'Goal Moved Successfully', 'data': filtered_users()})   
+
+       
+
+    def put(self, request):
+        if request.data['mode'] == 0:
+            from_id = request.data['from_id']
+            to_id = request.data['to_id']
+            if request.user.groups.all()[0].name == 'Developer' or request.user.groups.all()[0].name == 'Quality Assurance':
+                return JsonResponse({'message': 'Permission Denied: Unauthorized Reassignment of Goal.', 'data': filtered_users()})   
+        
+            goal = ScrumyGoals.objects.get(goal_id=from_id)
+            author = None
+            if to_id[0] == 'u':
+                author = ScrumyUser.objects.get(id =  to_id[1:])
+            else:
+                author = ScrumyGoals.objects.get(goal_id=to_id).user
+            goal.user = author
+            goal.save()
+            return JsonResponse({'message': 'Goal Reassigned Successfully.', 'data': filtered_users()})
         else:
-            return JsonResponse({'exit': 1, 'message': 'Not Logged In! Please Login First!'})
+            goal = ScrumyGoals.objects.get(goal_id = request.data['goal_id'])
+            if request.user.groups.all()[0].name != 'Owner' or request.user != goal.user.user:
+                return JsonResponse({'message': 'Permission Denied: Unauthorized Goal Name Change', 'data': filtered_users()})
+            
+            goal.goal_name = request.data['new_name']
+            print(goal);
+            goal.save()
+            return JsonResponse({'message': 'Goal Name Changed Successfully.', 'data': filtered_users()})
+
+
+def jwt_response_payload_handler(token, user=None, request=None):
+        return {
+            'token': token,
+            'role': user.groups.all()[0].name,
+            'message': 'Welcome!',
+            'data': filtered_users()
+        }

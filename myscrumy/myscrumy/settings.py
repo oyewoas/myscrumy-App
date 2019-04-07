@@ -44,19 +44,6 @@ INSTALLED_APPS = [
 ]
 
 
-# REST_FRAMEWORK = {
-# 'DEFAULT_AUTHENTICATION_CLASSES': (
-# 'rest_framework.authentication.TokenAuthentication',
-# 'rest_framework.authentication.SessionAuthentication',
-# ),
-
-# 'DEFAULT_PERMISSION_CLASSES': (
-# 'rest_framework.permissions.IsAuthenticated',
-# )
-# }
-
-
-
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -68,6 +55,18 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_jwt.authentication.JSONWebTokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+    ),
+}
+
+JWT_AUTH = {
+    'JWT_RESPONSE_PAYLOAD_HANDLER': 'ayooluwaoyewoscrumy.views.jwt_response_payload_handler'
+
+}
 
 ROOT_URLCONF = 'myscrumy.urls'
 
@@ -96,7 +95,7 @@ WSGI_APPLICATION = 'myscrumy.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'myscrumydbupdate',
+        'NAME': 'myscrumdb',
         'USER': 'oyewoas',
         'HOST': '',
         'PORT': 5000,

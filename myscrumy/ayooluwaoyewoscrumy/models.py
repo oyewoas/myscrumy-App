@@ -67,10 +67,10 @@ class WeekOnlyAddGoalForm(ModelForm):
     class Meta:
         model = ScrumyGoals
         fields = ['goal_name']
-# class MoveGoalForm(ModelForm):
-#     class Meta:
-#         model = ScrumyGoals
-#         fields = ['goal_status']
+class MoveGoalForm(ModelForm):
+    class Meta:
+        model = ScrumyGoals
+        fields = ['goal_status']
 
 class DevMoveGoalForm(forms.ModelForm):
     queryset = GoalStatus.objects.all()

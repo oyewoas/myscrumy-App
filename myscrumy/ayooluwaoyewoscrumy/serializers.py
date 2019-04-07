@@ -1,10 +1,10 @@
 from rest_framework import serializers
 from .models import User, ScrumyGoals, ScrumyUser
 
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ['username']
+# class UserSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = User
+#         fields = ['username']
 
 class ScrumGoalSerializer(serializers.ModelSerializer):
     class Meta:
