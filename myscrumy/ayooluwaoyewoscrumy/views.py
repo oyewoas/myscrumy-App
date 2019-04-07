@@ -328,7 +328,7 @@ class ScrumUserViewSet(viewsets.ModelViewSet):
             user.save()
             scrum_user = ScrumyUser(user=user, nickname=request.data['fullname'])
             scrum_user.save()
-            return JsonResponse({'message', 'User Created Successfully'})
+            return JsonResponse({'message': 'User Created Successfully'})
         else:
             return JsonResponse({'message': 'Error: Username Already Exists.'})
 
