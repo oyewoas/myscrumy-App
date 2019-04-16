@@ -9,11 +9,14 @@ class GoalStatus(models.Model):
     status_name = models.CharField(max_length=200)
     def __str__(self):
         return self.status_name
-
+        
 class ScrumyUser(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     nickname = models.CharField(max_length=200)
+    project_name = models.CharField(max_length= 250)
     age = models.IntegerField(default=0)
+    
+
     def __str__(self):
         return self.nickname
 

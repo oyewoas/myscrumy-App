@@ -315,6 +315,7 @@ class ScrumUserViewSet(viewsets.ModelViewSet):
         role = request.data['role']
         fullname = request.data['fullname']
         username = request.data['username']
+        
 
         if password == '' and role == '' and fullname == '' and username == '':
             return JsonResponse({'message': 'Error: All fields are required.'})
@@ -326,11 +327,11 @@ class ScrumUserViewSet(viewsets.ModelViewSet):
             group = Group.objects.get(name = request.data['role'])
             group.user_set.add(user)
             user.save()
-            scrum_user = ScrumyUser(user=user, nickname=request.data['fullname'])
+            scrum_user = ScrumyUser(user=user, nickname=request.data['fullname'], project_name=request.data['project_name'])
             scrum_user.save()
             return JsonResponse({'message': 'User Created Successfully'})
         else:
-            return JsonResponse({'message': 'Error: Username Already Exists.'})
+            return JsonResponse({'message': 'Error: Username Already Exists'})
 
 
 
@@ -468,6 +469,7 @@ def jwt_response_payload_handler(token, user=None, request=None):
         return {
             'token': token,
             'role': user.groups.all()[0].name,
-            'message': 'Welcome!',
+            'project_name': user.scrumyuser.project_name,
+            'message': 'Welcome!', 
             'data': filtered_users()
         }
