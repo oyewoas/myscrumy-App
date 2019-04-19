@@ -335,8 +335,8 @@ class ScrumUserViewSet(viewsets.ModelViewSet):
 
 
 
-def filtered_users():
-    users = ScrumUserSerializer(ScrumyUser.objects.all(), many=True).data
+def filtered_users(projectname):
+    users = ScrumUserSerializer(ScrumyUser.objects.filter(project_name = projectname), many=True).data
 
     for user in users:
         user['scrumygoals_set'] = [x for x in user['scrumygoals_set']
@@ -353,7 +353,7 @@ def filtered_users():
 
 #         login_user = authenticate(request, username=username, password=password)
 #         if login_user is not None:
-#             return JsonResponse({'exit': 0, 'message': 'Welcome to your Scrum Board', 'role': login_user.groups.all()[0].name, 'data': filtered_users()})
+#             return JsonResponse({'exit': 0, 'message': 'Welcome to your Scrum Board', 'role': login_user.groups.all()[0].name, 'data': filtered_users(project_name)})
 #         else: 
 #             return JsonResponse({'exit': 1, 'message': 'Error: Invalid Credentials'})
 
@@ -364,6 +364,7 @@ class ScrumGoalViewSet(viewsets.ModelViewSet):
     serializer_class = ScrumGoalSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
     def create(self, request):
+            projectname = request.user.scrumyuser.project_name
             goal_name = request.data['goal_name']
             group_name = request.user.groups.all()[0].name 
             status_name = GoalStatus(id=1)
@@ -375,10 +376,11 @@ class ScrumGoalViewSet(viewsets.ModelViewSet):
                 
             goal = ScrumyGoals(user=request.user.scrumyuser, goal_name = goal_name, goal_status = status_name)
             goal.save()
-            return JsonResponse({ 'message': 'Goal Added', 'data': filtered_users()})
+            return JsonResponse({ 'message': 'Goal Added', 'data': filtered_users(projectname)})
         
     
     def patch(self, request):
+            projectname = request.user.scrumyuser.project_name
             goals_id = request.data['goal_id']
             to_id = request.data['to_id']
             print(to_id)
@@ -386,12 +388,12 @@ class ScrumGoalViewSet(viewsets.ModelViewSet):
             if to_id == 4:
                 if request.user.groups.all()[0].name == 'Developer':
                     if request.user != ScrumyGoals.objects.get(goal_id=goals_id).user.user:
-                        return JsonResponse({ 'message': 'Permission Denied: Unauthorized Deletion of Goal.', 'data': filtered_users()})
+                        return JsonResponse({ 'message': 'Permission Denied: Unauthorized Deletion of Goal.', 'data': filtered_users(projectname)})
                 
                 del_goal = ScrumyGoals.objects.get(goal_id = goals_id)
                 del_goal.visible = False
                 del_goal.save()
-                return JsonResponse({'message': 'Goal Removed Successfully', 'data': filtered_users()})
+                return JsonResponse({'message': 'Goal Removed Successfully', 'data': filtered_users(projectname)})
             else:
                 goal_item = ScrumyGoals.objects.get(goal_id=goals_id)
                 print(goal_item)
@@ -403,7 +405,7 @@ class ScrumGoalViewSet(viewsets.ModelViewSet):
                 if group == 'Developer':
 
                     if request.user != goal_item.user.user:
-                        return JsonResponse({'message': 'Permission Denied: Unauthorized Deletion of Goal.', 'data': filtered_users()})
+                        return JsonResponse({'message': 'Permission Denied: Unauthorized Deletion of Goal.', 'data': filtered_users(projectname)})
 
                 if group == 'Owner':
                     from_allowed = [1,2,3,4]
@@ -431,19 +433,20 @@ class ScrumGoalViewSet(viewsets.ModelViewSet):
                     goal_item.goal_status_id = to_id + 1
 
                 else: 
-                    return JsonResponse({ 'message': 'Permission Denied: Unauthorized Movement of Goal.', 'data': filtered_users()})   
+                    return JsonResponse({ 'message': 'Permission Denied: Unauthorized Movement of Goal.', 'data': filtered_users(projectname)})   
 
                 goal_item.save()  
-                return JsonResponse({ 'message': 'Goal Moved Successfully', 'data': filtered_users()})   
+                return JsonResponse({ 'message': 'Goal Moved Successfully', 'data': filtered_users(projectname)})   
 
        
 
     def put(self, request):
+        projectname = request.user.scrumyuser.project_name
         if request.data['mode'] == 0:
             from_id = request.data['from_id']
             to_id = request.data['to_id']
             if request.user.groups.all()[0].name == 'Developer' or request.user.groups.all()[0].name == 'Quality Assurance':
-                return JsonResponse({'message': 'Permission Denied: Unauthorized Reassignment of Goal.', 'data': filtered_users()})   
+                return JsonResponse({'message': 'Permission Denied: Unauthorized Reassignment of Goal.', 'data': filtered_users(projectname)})   
         
             goal = ScrumyGoals.objects.get(goal_id=from_id)
             author = None
@@ -453,23 +456,26 @@ class ScrumGoalViewSet(viewsets.ModelViewSet):
                 author = ScrumyGoals.objects.get(goal_id=to_id).user
             goal.user = author
             goal.save()
-            return JsonResponse({'message': 'Goal Reassigned Successfully.', 'data': filtered_users()})
+            return JsonResponse({'message': 'Goal Reassigned Successfully.', 'data': filtered_users(projectname)})
         else:
             goal = ScrumyGoals.objects.get(goal_id = request.data['goal_id'])
             if request.user.groups.all()[0].name != 'Owner' or request.user != goal.user.user:
-                return JsonResponse({'message': 'Permission Denied: Unauthorized Goal Name Change', 'data': filtered_users()})
+                return JsonResponse({'message': 'Permission Denied: Unauthorized Goal Name Change', 'data': filtered_users(projectname)})
             
             goal.goal_name = request.data['new_name']
             print(goal);
             goal.save()
-            return JsonResponse({'message': 'Goal Name Changed Successfully.', 'data': filtered_users()})
+            return JsonResponse({'message': 'Goal Name Changed Successfully.', 'data': filtered_users(projectname)})
 
 
 def jwt_response_payload_handler(token, user=None, request=None):
+        projectname = request.data['project_name']
+
+        print(projectname);
         return {
             'token': token,
             'role': user.groups.all()[0].name,
             'project_name': user.scrumyuser.project_name,
             'message': 'Welcome!', 
-            'data': filtered_users()
+            'users': filtered_users(projectname)
         }
